@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cool Audio Quiz App</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; 
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    font-family: 'Poppins', sans-serif;
+    color: #fff;
+    display: flex;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #quiz-container {
+    background: rgba(255 255 255 / 0.1);
+    border-radius: 15px;
+    max-width: 460px;
+    width: 100%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    padding: 30px 40px;
+    backdrop-filter: blur(12px);
+  }
+  h1 {
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 25px;
+    letter-spacing: 1.1px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  }
+  #question {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+  }
+  .answers {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .answer {
+    background: rgba(255 255 255 / 0.2);
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s, transform 0.2s;
+    user-select: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  .answer:hover {
+    background: rgba(255 255 255 / 0.35);
+    transform: scale(1.03);
+  }
+  .answer.correct {
+    background: #4ade80;
+    box-shadow: 0 0 10px #4ade80;
+    cursor: default;
+  }
+  .answer.wrong {
+    background: #f87171;
+    box-shadow: 0 0 10px #f87171;
+    cursor: default;
+  }
+  #next-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    background: #764ba2;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(118,75,162,0.6);
+    transition: background-color 0.3s;
+  }
+  #next-btn:hover:not(:disabled) {
+    background: #8866c9;
+  }
+  #next-btn:disabled {
+    background: #a39ec9;
+    cursor: not-allowed;
+  }
+  #score-container {
+    text-align: center;
+  }
+  #score-container h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+  #restart-btn {
+    padding: 14px 40px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 12px;
+    background: #4ade80;
+    color: #064e3b;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(74,222,128,0.6);
+    transition: background-color 0.3s;
+  }
+  #restart-btn:hover {
+    background: #22c55e;
+  }
+  /* Audio button style */
+  #audio-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    font-size: 20px;
+    position: absolute;
+    top: 22px;
+    right: 30px;
+    transition: color 0.3s;
+  }
+  #audio-btn:hover {
+    color: #bb86fc;
+  }
+  .question-wrapper {
+    position: relative;
+  }
+</style>
+</head>
+<body>
+  <div id="quiz-container" role="main" aria-live="polite" aria-atomic="true">
+    <h1>Quiz Challenge</h1>
+    <div class="question-wrapper">
+      <button id="audio-btn" title="Play question audio" aria-label="Play question audio">&#128266;</button>
+      <div id="question"></div>
+    </div>
+    <ul id="answers" class="answers" role="list"></ul>
+    <button id="next-btn" disabled>Next</button>
+
+    <div id="score-container" hidden>
+      <h2>Your Score: <span id="score"></span>/5</h2>
+      <button id="restart-btn">Restart Quiz</button>
+    </div>
+
+    <!-- Audio elements for feedback -->
+    <audio id="audio-correct" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+    <audio id="audio-wrong" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg" preload="auto"></audio>
+    <!-- Audio for question reading (optional) -->
+    <audio id="audio-question"></audio>
+  </div>
+
+<script>
+  const quizData = [
+    {
+      question: "What is the capital of France?",
+      answers: [
+        { text: "Berlin", correct: false },
+        { text: "Madrid", correct: false },
+        { text: "Paris", correct: true },
+        { text: "Rome", correct: false },
+      ],
+      audio: null
+    },
+    {
+      question: "Which planet is known as the Red Planet?",
+      answers: [
+        { text: "Earth", correct: false },
+        { text: "Mars", correct: true },
+        { text: "Jupiter", correct: false },
+        { text: "Venus", correct: false },
+      ],
+      audio: null
+    },
+    {
+      question: "Who wrote 'Hamlet'?",
+      answers: [
+        { text: "Charles Dickens", correct: false },
+        { text: "William Shakespeare", correct: true },
+        { text: "Mark Twain", correct: false },
+        { text: "Jane Austen", correct: false },
+      ],
+      audio: null
+    },
+    {
+      question: "What is the boiling point of water at sea level?",
+      answers: [
+        { text: "100°C", correct: true },
+        { text: "90°C", correct: false },
+        { text: "110°C", correct: false },
+        { text: "80°C", correct: false },
+      ],
+      audio: null
+    },
+    {
+      question: "Which language is used for web apps?",
+      answers: [
+        { text: "Python", correct: false },
+        { text: "JavaScript", correct: true },
+        { text: "C++", correct: false },
+        { text: "Java", correct: false },
+      ],
+      audio: null
+    }
+  ];
+
+  const questionElem = document.getElementById('question');
+  const answersElem = document.getElementById('answers');
+  const nextBtn = document.getElementById('next-btn');
+  const scoreContainer = document.getElementById('score-container');
+  const scoreElem = document.getElementById('score');
+  const restartBtn = document.getElementById('restart-btn');
+  const audioCorrect = document.getElementById('audio-correct');
+  const audioWrong = document.getElementById('audio-wrong');
+  const audioQuestion = document.getElementById('audio-question');
+  const audioBtn = document.getElementById('audio-btn');
+
+  let currentQuestionIndex = 0;
+  let score = 0;
+  let answered = false;
+
+  function startQuiz() {
+    currentQuestionIndex = 0;
+    score = 0;
+    scoreContainer.hidden = true;
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Next';
+    showQuestion();
+  }
+
+  function showQuestion() {
+    answered = false;
+    nextBtn.disabled = true;
+    answersElem.innerHTML = '';
+    const currentQuestion = quizData[currentQuestionIndex];
+    questionElem.textContent = currentQuestion.question;
+
+    // Load question audio if present, else disable audio button
+    if(currentQuestion.audio) {
+      audioQuestion.src = currentQuestion.audio;
+      audioBtn.disabled = false;
+      audioBtn.style.opacity = '1';
+    } else {
+      audioQuestion.src = '';
+      audioBtn.disabled = true;
+      audioBtn.style.opacity = '0.4';
+    }
+
+    currentQuestion.answers.forEach((answer, index) => {
+      const li = document.createElement('li');
+      li.classList.add('answer');
+      li.textContent = answer.text;
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      li.setAttribute('aria-pressed', 'false');
+      li.addEventListener('click', () => selectAnswer(li, answer.correct));
+      li.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectAnswer(li, answer.correct);
+        }
+      });
+      answersElem.appendChild(li);
+    });
+  }
+
+  function selectAnswer(selectedElem, isCorrect) {
+    if (answered) return;
+    answered = true;
+
+    if (isCorrect) {
+      selectedElem.classList.add('correct');
+      audioCorrect.play();
+      score++;
+    } else {
+      selectedElem.classList.add('wrong');
+      audioWrong.play();
+      // Highlight correct answer
+      [...answersElem.children].forEach(answerElem => {
+        if (quizData[currentQuestionIndex].answers.find(a => a.text === answerElem.textContent).correct) {
+          answerElem.classList.add('correct');
+        }
+      });
+    }
+
+    // Disable all answers after selection
+    [...answersElem.children].forEach(answerElem => {
+      answerElem.style.pointerEvents = 'none';
+      answerElem.setAttribute('aria-pressed', 'true');
+    });
+
+    nextBtn.disabled = false;
+    if(currentQuestionIndex === quizData.length - 1){
+      nextBtn.textContent = 'See Results';
+    }
+  }
+
+  nextBtn.addEventListener('click', () => {
+    currentQuestionIndex++;
+    if(currentQuestionIndex < quizData.length) {
+      showQuestion();
+    } else {
+      showScore();
+    }
+  });
+
+  restartBtn.addEventListener('click', () => {
+    startQuiz();
+  });
+
+  audioBtn.addEventListener('click', () => {
+    if(audioQuestion.src) {
+      audioQuestion.play();
+    }
+  });
+
+  function showScore() {
+    questionElem.textContent = '';
+    answersElem.innerHTML = '';
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Next';
+    scoreContainer.hidden = false;
+    scoreElem.textContent = score;
+  }
+
+  startQuiz();
+</script>
+</body>
+</html>
